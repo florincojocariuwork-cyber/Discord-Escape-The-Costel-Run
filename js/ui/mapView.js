@@ -8,13 +8,12 @@ function renderMap(root) {
   header.innerHTML = `
     <div class="map-title">${ACT_EMOJIS[GameState.act]} Act ${GameState.act}: ${ACT_NAMES[GameState.act]}</div>
     <div class="map-stats">
-      <span>😤 Tilt: ${GameState.tilt}/${MAX_TILT}</span>
+      <span>😤 ${GameState.tilt}/${MAX_TILT}</span>
       <span>💰 ${GameState.gold}g</span>
-      <span>🃏 ${GameState.deck.length} cards</span>
+      <span>🃏 ${GameState.deck.length}</span>
     </div>
   `;
 
-  // Relic bar
   if (GameState.relics.length > 0) {
     const relicBar = document.createElement('div');
     relicBar.className = 'relic-bar';
@@ -30,44 +29,44 @@ function renderMap(root) {
 
   screen.appendChild(header);
 
-  // Map container
+  const map = GameState.map;
+  if (!map) { root.appendChild(screen); return; }
+
+  // Responsive cell sizing — fill available space
+  const COLS = 4;
+  const isMobile = window.innerWidth <= 600;
+  const availW = window.innerWidth - (isMobile ? 16 : 48);
+  const headerH = isMobile ? 90 : 110;
+  const footerH = 52;
+  const availH = window.innerHeight - headerH - footerH;
+
+  const CELL_W = Math.floor(Math.min(availW, 560) / COLS);
+  const CELL_H = Math.max(60, Math.floor(availH / map.length));
+  const NODE_SIZE = Math.min(52, Math.floor(CELL_W * 0.68));
+  const NODE_HALF = Math.floor(NODE_SIZE / 2);
+
+  const totalW = COLS * CELL_W;
+  const totalH = map.length * CELL_H;
+
   const mapContainer = document.createElement('div');
   mapContainer.className = 'map-container';
 
   const mapGrid = document.createElement('div');
   mapGrid.className = 'map-grid';
-  mapGrid.style.position = 'relative';
+  mapGrid.style.cssText = `position:relative; width:${totalW}px; height:${totalH}px;`;
 
-  const map = GameState.map;
-  if (!map) { root.appendChild(screen); return; }
-
-  const CELL_W = 68;
-  const CELL_H = 52;
-  const COLS = 6;
-
-  // SVG for connections
+  // SVG connections
   const svgNS = 'http://www.w3.org/2000/svg';
-  const svgEl = document.createElementNS(svgNS, 'svg');
-  svgEl.setAttribute('class', 'map-svg');
-  svgEl.style.position = 'absolute';
-  svgEl.style.top = '0';
-  svgEl.style.left = '0';
-  svgEl.style.pointerEvents = 'none';
-  const totalW = COLS * CELL_W;
-  const totalH = map.length * CELL_H;
-  svgEl.setAttribute('width', totalW);
-  svgEl.setAttribute('height', totalH);
-  svgEl.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('class', 'map-svg');
+  svg.setAttribute('width', totalW);
+  svg.setAttribute('height', totalH);
+  svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
 
-  // Build id → node lookup
   const nodeById = {};
-  for (const row of map) {
-    for (const n of row) {
-      if (n) nodeById[n.id] = n;
-    }
-  }
+  for (const row of map) for (const n of row) { if (n) nodeById[n.id] = n; }
 
-  // Draw connections
   for (const row of map) {
     for (const node of row) {
       if (!node) continue;
@@ -82,15 +81,12 @@ function renderMap(root) {
         line.setAttribute('x1', x1); line.setAttribute('y1', y1);
         line.setAttribute('x2', x2); line.setAttribute('y2', y2);
         line.setAttribute('class', node.visited ? 'map-line visited' : 'map-line');
-        svgEl.appendChild(line);
+        svg.appendChild(line);
       }
     }
   }
 
-  mapGrid.style.width = totalW + 'px';
-  mapGrid.style.height = totalH + 'px';
-
-  // Draw nodes (bottom to top display order)
+  // Draw nodes
   const displayRows = [...map].reverse();
   displayRows.forEach((row, displayRowIdx) => {
     for (const node of row) {
@@ -101,21 +97,17 @@ function renderMap(root) {
       if (node.reachable && !node.visited) classes.push('reachable');
       nodeEl.className = classes.join(' ');
 
-      const x = node.col * CELL_W + CELL_W / 2 - 24;
-      const y = displayRowIdx * CELL_H + CELL_H / 2 - 24;
-      nodeEl.style.left = x + 'px';
-      nodeEl.style.top = y + 'px';
+      const cx = node.col * CELL_W + CELL_W / 2;
+      const cy = displayRowIdx * CELL_H + CELL_H / 2;
+      nodeEl.style.cssText = `left:${cx - NODE_HALF}px; top:${cy - NODE_HALF}px; width:${NODE_SIZE}px; height:${NODE_SIZE}px;`;
 
-      const icon = document.createElement('div');
-      icon.className = 'node-icon';
-      icon.textContent = NODE_ICONS[node.type] || '?';
+      const iconSize = Math.max(14, Math.floor(NODE_SIZE * 0.42));
+      const labelSize = Math.max(7, Math.floor(NODE_SIZE * 0.16));
 
-      const nodeLabel = document.createElement('div');
-      nodeLabel.className = 'node-label';
-      nodeLabel.textContent = node.type === NT.BOSS ? 'BOSS' : node.type.charAt(0) + node.type.slice(1).toLowerCase();
-
-      nodeEl.appendChild(icon);
-      nodeEl.appendChild(nodeLabel);
+      nodeEl.innerHTML = `
+        <div class="node-icon" style="font-size:${iconSize}px">${NODE_ICONS[node.type] || '?'}</div>
+        <div class="node-label" style="font-size:${labelSize}px">${node.type === NT.BOSS ? 'BOSS' : node.type.charAt(0) + node.type.slice(1).toLowerCase()}</div>
+      `;
 
       if (node.reachable && !node.visited) {
         nodeEl.onclick = () => navigateToNode(node.id);
@@ -124,17 +116,16 @@ function renderMap(root) {
     }
   });
 
-  mapGrid.appendChild(svgEl);
+  mapGrid.appendChild(svg);
   mapContainer.appendChild(mapGrid);
   screen.appendChild(mapContainer);
 
-  // Deck viewer button
-  const deckBtn = makeBtn('🃏 View Deck', () => {
+  const deckBtn = makeBtn('🃏 Deck', () => {
     GameState.screen = SCR.DECK_VIEW;
     GameState.deckViewMode = 'view';
     renderGame();
-  }, 'btn-secondary');
-  deckBtn.style.margin = '8px auto';
+  }, 'btn-secondary btn-small');
+  deckBtn.style.cssText = 'display:block; margin:6px auto;';
   screen.appendChild(deckBtn);
 
   root.appendChild(screen);

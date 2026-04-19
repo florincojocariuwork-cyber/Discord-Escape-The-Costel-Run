@@ -4,7 +4,7 @@ const MAX_ENERGY = 3;
 const HAND_SIZE = 5;
 const CARDS_PER_REWARD = 3;
 const ACT_COUNT = 3;
-const FLOORS_PER_ACT = 12;
+const FLOORS_PER_ACT = 6;
 const BURN_TILT_PER_STACK = 5;
 
 const NT = {

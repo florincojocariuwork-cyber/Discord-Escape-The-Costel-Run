@@ -1,27 +1,24 @@
-// Map generation — directed acyclic graph, 12 rows per act
+// Map generation — 6 rows per act: 2-3 fights + optional elite/event/shop + rest + boss
 
 function generateMap(act) {
-  const rows = FLOORS_PER_ACT;
-  const cols = 6;
+  const rows = FLOORS_PER_ACT; // 6
+  const COLS = 4;
   const map = [];
 
-  // Assign node types to each row band
+  // Row structure for a short, punchy act:
+  // 0: COMBAT (always — first encounter)
+  // 1: COMBAT / EVENT / ALLY
+  // 2: ELITE / SHOP / REST  (branching choice node)
+  // 3: COMBAT / EVENT / ALLY
+  // 4: REST (forced — breather before boss)
+  // 5: BOSS
   function pickType(row) {
     if (row === rows - 1) return NT.BOSS;
     if (row === rows - 2) return NT.REST;
-    if (row >= rows - 4 && row < rows - 2) {
-      return weighted([NT.COMBAT, NT.ELITE, NT.SHOP, NT.REST], [30, 30, 20, 20]);
-    }
-    if (row >= rows - 7 && row < rows - 4) {
-      return weighted([NT.COMBAT, NT.ELITE, NT.EVENT, NT.ALLY], [40, 25, 20, 15]);
-    }
-    if (row >= 4 && row < rows - 7) {
-      return weighted([NT.COMBAT, NT.ELITE, NT.SHOP, NT.EVENT], [45, 20, 20, 15]);
-    }
-    if (row < 4) {
-      return weighted([NT.COMBAT, NT.EVENT, NT.ALLY], [75, 15, 10]);
-    }
-    return NT.COMBAT;
+    if (row === rows - 3) return weighted([NT.COMBAT, NT.EVENT, NT.ALLY], [55, 28, 17]);
+    if (row === rows - 4) return weighted([NT.ELITE, NT.SHOP, NT.REST], [35, 38, 27]);
+    if (row === 1)        return weighted([NT.COMBAT, NT.EVENT, NT.ALLY], [60, 25, 15]);
+    return NT.COMBAT; // row 0
   }
 
   function weighted(types, weights) {
@@ -34,15 +31,17 @@ function generateMap(act) {
     return types[0];
   }
 
-  // Generate active columns per row
+  // Active columns per row (2-3 branches for variety)
   const activePerRow = [];
   for (let row = 0; row < rows; row++) {
     if (row === rows - 1) {
-      activePerRow.push([2]); // Boss centered
+      activePerRow.push([1]); // Boss centered
+    } else if (row === rows - 2) {
+      activePerRow.push([0, 2]); // Two rest options
     } else {
-      const count = row < 3 ? 4 : (row < rows - 3 ? Math.floor(Math.random() * 2) + 3 : 3);
-      const available = [0, 1, 2, 3, 4, 5];
-      const chosen = shuffle(available).slice(0, Math.min(count, 4));
+      const count = row === 0 ? 3 : 2 + (Math.random() < 0.5 ? 1 : 0);
+      const available = [0, 1, 2, 3];
+      const chosen = shuffle(available).slice(0, Math.min(count, COLS));
       chosen.sort((a, b) => a - b);
       activePerRow.push(chosen);
     }
@@ -50,44 +49,35 @@ function generateMap(act) {
 
   // Build node grid
   for (let row = 0; row < rows; row++) {
-    const rowArr = new Array(cols).fill(null);
-    const active = activePerRow[row];
-    for (const col of active) {
+    const rowArr = new Array(COLS).fill(null);
+    for (const col of activePerRow[row]) {
       const type = pickType(row);
-      const node = {
+      rowArr[col] = {
         id: `r${row}c${col}`,
         row, col, type,
         visited: false,
         reachable: row === 0,
         connections: [],
-        enemyId: null,
-        eventId: null
+        enemyId: assignEnemy(act, type)
       };
-      node.enemyId = assignEnemy(act, type, row, rows);
-      rowArr[col] = node;
     }
     map.push(rowArr);
   }
 
-  // Connect nodes: each node connects to 1-2 nodes in next row, no crossings
+  // Connect nodes — each connects to 1-2 closest nodes in next row
   for (let row = 0; row < rows - 1; row++) {
     const current = activePerRow[row];
     const next = activePerRow[row + 1];
-
     for (const col of current) {
       const node = map[row][col];
       if (!node) continue;
-
-      // Find closest columns in next row
       const sorted = [...next].sort((a, b) => Math.abs(a - col) - Math.abs(b - col));
       const targets = sorted.slice(0, Math.min(2, sorted.length));
-
       for (const t of targets) {
-        const target = map[row + 1][t];
-        if (target) node.connections.push(target.id);
+        if (map[row + 1][t]) node.connections.push(`r${row + 1}c${t}`);
       }
       if (node.connections.length === 0 && next.length > 0) {
-        node.connections.push(map[row + 1][next[0]].id);
+        node.connections.push(`r${row + 1}c${next[0]}`);
       }
     }
   }
@@ -95,14 +85,13 @@ function generateMap(act) {
   return map;
 }
 
-function assignEnemy(act, type, row, totalRows) {
+function assignEnemy(act, type) {
   const regulars = Object.values(ENEMIES).filter(e => e.act === act && e.tier === 'REGULAR');
-  const elites = Object.values(ENEMIES).filter(e => e.act === act && e.tier === 'ELITE');
-  const boss = Object.values(ENEMIES).find(e => e.act === act && e.tier === 'BOSS');
-
-  if (type === NT.BOSS && boss) return boss.id;
-  if (type === NT.ELITE && elites.length) return elites[Math.floor(Math.random() * elites.length)].id;
-  if ((type === NT.COMBAT) && regulars.length) return regulars[Math.floor(Math.random() * regulars.length)].id;
+  const elites   = Object.values(ENEMIES).filter(e => e.act === act && e.tier === 'ELITE');
+  const boss     = Object.values(ENEMIES).find(e => e.act === act && e.tier === 'BOSS');
+  if (type === NT.BOSS   && boss)           return boss.id;
+  if (type === NT.ELITE  && elites.length)  return elites[Math.floor(Math.random() * elites.length)].id;
+  if (type === NT.COMBAT && regulars.length) return regulars[Math.floor(Math.random() * regulars.length)].id;
   return null;
 }
 
