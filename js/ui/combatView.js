@@ -103,8 +103,13 @@ function renderCombat(root) {
   }
 
   const enemyArt = document.createElement('div');
-  enemyArt.className = 'enemy-art';
-  enemyArt.textContent = enemy.art;
+  enemyArt.className = 'enemy-art-wrap' + (enemy.tier === 'BOSS' ? ' boss-art' : '');
+  const enemyImg = document.createElement('img');
+  enemyImg.src = getEnemyImageUrl(enemy);
+  enemyImg.alt = enemy.name;
+  enemyImg.className = 'enemy-art-img';
+  enemyImg.onerror = () => { enemyImg.style.display = 'none'; enemyArt.textContent = enemy.art; };
+  enemyArt.appendChild(enemyImg);
 
   const enemyName = document.createElement('div');
   enemyName.className = 'enemy-name';

@@ -162,7 +162,36 @@ body {
 }
 .enemy-panel { border-right: none; border-left: 1px solid rgba(255,255,255,0.06); }
 
-.costel-art, .enemy-art { font-size: 64px; line-height: 1; }
+.costel-art { font-size: 64px; line-height: 1; }
+
+.enemy-art-wrap {
+  width: 130px;
+  height: 130px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.enemy-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.node-elite .enemy-art-wrap,
+.enemy-panel .enemy-art-wrap {
+  border-color: rgba(88,101,242,0.4);
+}
+
+/* Boss gets a glowing border */
+.enemy-art-wrap.boss-art {
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(246,201,14,0.4);
+}
 .costel-name, .enemy-name { font-weight: 700; font-size: 14px; color: #fff; text-align: center; }
 .block-display { font-size: 18px; }
 .energy-display { font-size: 13px; color: var(--accent-teal); }

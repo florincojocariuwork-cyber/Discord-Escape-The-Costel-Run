@@ -306,3 +306,12 @@ function createEnemyInstance(enemyDef) {
 function getActEnemies(act, tier) {
   return Object.values(ENEMIES).filter(e => e.act === act && e.tier === tier);
 }
+
+function getEnemyImageUrl(enemy) {
+  const seed = encodeURIComponent(enemy.name);
+  const styles = { BOSS: 'adventurer', ELITE: 'bottts', REGULAR: 'pixel-art' };
+  const style = styles[enemy.tier] || 'pixel-art';
+  const bgColors = { BOSS: 'b91c1c', ELITE: '7c3aed', REGULAR: '1e3a5f' };
+  const bg = bgColors[enemy.tier] || '1e3a5f';
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${seed}&backgroundColor=${bg}&size=160`;
+}
