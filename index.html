@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1200">
+  <title>Costel's Discord Escape</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-root"></div>
+
+  <!-- Data layer -->
+  <script src="js/constants.js"></script>
+  <script src="js/data/cards.js"></script>
+  <script src="js/data/enemies.js"></script>
+  <script src="js/data/relics.js"></script>
+  <script src="js/data/events.js"></script>
+
+  <!-- Systems -->
+  <script src="js/systems/state.js"></script>
+  <script src="js/systems/deck.js"></script>
+  <script src="js/systems/relic.js"></script>
+  <script src="js/systems/combat.js"></script>
+  <script src="js/systems/map.js"></script>
+  <script src="js/systems/shop.js"></script>
+  <script src="js/systems/reward.js"></script>
+
+  <!-- UI -->
+  <script src="js/ui/renderer.js"></script>
+  <script src="js/ui/overlays.js"></script>
+  <script src="js/ui/mapView.js"></script>
+  <script src="js/ui/combatView.js"></script>
+  <script src="js/ui/rewardView.js"></script>
+  <script src="js/ui/shopView.js"></script>
+  <script src="js/ui/eventView.js"></script>
+  <script src="js/ui/deckView.js"></script>
+
+  <script>
+    window.addEventListener('load', () => {
+      initGame();
+      renderGame();
+    });
+  </script>
+</body>
+</html>
